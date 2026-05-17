@@ -1,0 +1,423 @@
+import { useState, useEffect } from "react";
+
+const ENTITIES = [
+  { id: "janedope", label: "Jane Dope", color: "#16a34a" },
+  { id: "consulting", label: "Abi Roach Consulting", color: "#2563eb" },
+  { id: "abzlabs", label: "Abz Labs", color: "#9333ea" },
+  { id: "corp", label: "Jane Dope Inc", color: "#d97706" },
+];
+
+function useTypewriter(text, speed = 14, active = true) {
+  const [displayed, setDisplayed] = useState("");
+  useEffect(() => {
+    if (!active || !text) return;
+    setDisplayed("");
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) clearInterval(interval);
+    }, speed);
+    return () => clearInterval(interval);
+  }, [text, active]);
+  return displayed;
+}
+
+function Section({ title, children, hint }) {
+  return (
+    <div style={{ marginBottom: 48 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 20, borderBottom: "2px solid #000", paddingBottom: 10 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#000" }}>{title}</span>
+        {hint && <span style={{ fontSize: 13, color: "#999", fontStyle: "italic" }}>{hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function BigInput({ label, value, onChange, placeholder, rows = 3 }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#444", marginBottom: 8 }}>{label}</label>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          width: "100%",
+          fontSize: 17,
+          color: "#111",
+          background: "#fafafa",
+          border: `2px solid ${focused ? "#000" : "#e0e0e0"}`,
+          borderRadius: 8,
+          padding: "14px 16px",
+          outline: "none",
+          resize: "none",
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          lineHeight: 1.7,
+          boxSizing: "border-box",
+          transition: "border-color 0.15s",
+        }}
+      />
+    </div>
+  );
+}
+
+function MoneyInput({ label, value, onChange }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ flex: 1, minWidth: 140 }}>
+      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#999", marginBottom: 8, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</label>
+      <div style={{ display: "flex", alignItems: "center", borderBottom: `2px solid ${focused ? "#000" : "#ddd"}`, paddingBottom: 6, transition: "border-color 0.15s" }}>
+        <span style={{ fontSize: 20, color: "#bbb", marginRight: 4, lineHeight: 1 }}>$</span>
+        <input
+          type="text"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="0"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{
+            fontSize: 26,
+            fontWeight: 700,
+            color: "#111",
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            width: "100%",
+            fontFamily: "system-ui, sans-serif",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CheckItem({ text, entity, done, onToggle, onTextChange, onEntityChange }) {
+  const e = ENTITIES.find(x => x.id === entity);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: "1px solid #f0f0f0" }}>
+      <button
+        onClick={onToggle}
+        style={{
+          width: 24, height: 24, borderRadius: 5, flexShrink: 0,
+          border: `2px solid ${done ? e.color : "#ccc"}`,
+          background: done ? e.color : "#fff",
+          cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "all 0.15s",
+        }}
+      >
+        {done && <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>✓</span>}
+      </button>
+      <input
+        value={text}
+        onChange={ev => onTextChange(ev.target.value)}
+        placeholder="Add a priority action..."
+        style={{
+          fontSize: 16,
+          color: done ? "#bbb" : "#111",
+          textDecoration: done ? "line-through" : "none",
+          background: "transparent",
+          border: "none",
+          outline: "none",
+          flex: 1,
+          fontFamily: "Georgia, serif",
+        }}
+      />
+      <select
+        value={entity}
+        onChange={ev => onEntityChange(ev.target.value)}
+        style={{
+          fontSize: 12,
+          color: e.color,
+          background: "#fff",
+          border: `1.5px solid ${e.color}`,
+          borderRadius: 5,
+          padding: "4px 8px",
+          outline: "none",
+          cursor: "pointer",
+          fontWeight: 700,
+          flexShrink: 0,
+        }}
+      >
+        {ENTITIES.map(x => <option key={x.id} value={x.id}>{x.label}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function Briefing({ focus, intents, freshbooks }) {
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const typed = useTypewriter(text, 10, done);
+
+  const generate = async () => {
+    setLoading(true);
+    setDone(false);
+    setText("");
+    const today = new Date().toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    const prompt = `You are Abi's AI chief of staff. She runs four entities:
+1. Jane Dope — size-inclusive cannabis-culture fashion brand (janedope.ca, XS–6X)
+2. Jane Dope Inc — the corporation
+3. Abi Roach Consulting — brand strategy, product, fractional merchandising
+4. Abz Labs — custom AI automation for SMEs
+
+Today is ${today}. Her schedule: daughter drop-off 8am, pick-up 5pm, Aquafit 11:45am–1:30pm, dinner prep 4:30pm.
+
+Freshbooks snapshot:
+Invoiced MTD: $${freshbooks.invoiced || "not entered"}
+Outstanding: $${freshbooks.outstanding || "not entered"}
+Overdue: $${freshbooks.overdue || "not entered"}
+Notes: ${freshbooks.notes || "none"}
+
+Today's focus: ${focus || "not specified"}
+On her mind: ${intents || "not specified"}
+
+Write a sharp, direct morning briefing. No fluff. No cheerful openers. Lead with what needs her attention most urgently. Flag financial risk if relevant. Give 3 clear priorities. End with one pointed question she probably hasn't asked herself. Max 200 words. Use plain paragraphs — no bullet points, no headers.`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      const data = await res.json();
+      const t = data.content?.find(b => b.type === "text")?.text || "Unable to generate.";
+      setText(t);
+      setDone(true);
+    } catch {
+      setText("Connection error. Try again.");
+      setDone(true);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <button
+        onClick={generate}
+        disabled={loading}
+        style={{
+          display: "block",
+          width: "100%",
+          padding: "18px",
+          fontSize: 15,
+          fontWeight: 700,
+          letterSpacing: "0.06em",
+          background: loading ? "#f0f0f0" : "#000",
+          color: loading ? "#aaa" : "#fff",
+          border: "none",
+          borderRadius: 8,
+          cursor: loading ? "default" : "pointer",
+          marginBottom: 24,
+          textTransform: "uppercase",
+          transition: "background 0.15s",
+        }}
+      >
+        {loading ? "Generating..." : done ? "↻  Regenerate Briefing" : "→  Generate Morning Briefing"}
+      </button>
+
+      {!text && !loading && (
+        <p style={{ fontSize: 16, color: "#bbb", fontStyle: "italic", fontFamily: "Georgia, serif", lineHeight: 1.8, margin: 0 }}>
+          Fill in your focus and numbers above, then generate your briefing.
+        </p>
+      )}
+
+      {loading && (
+        <div style={{ display: "flex", gap: 8, padding: "16px 0", alignItems: "center" }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              width: 10, height: 10, borderRadius: "50%", background: "#000",
+              animation: "bounce 1.2s ease-in-out infinite",
+              animationDelay: `${i * 0.2}s`,
+            }} />
+          ))}
+          <span style={{ marginLeft: 8, fontSize: 14, color: "#999" }}>Writing your briefing...</span>
+        </div>
+      )}
+
+      {done && (
+        <div style={{
+          background: "#fafafa",
+          border: "2px solid #e0e0e0",
+          borderRadius: 8,
+          padding: "24px 28px",
+          fontSize: 17,
+          color: "#111",
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          lineHeight: 1.85,
+          whiteSpace: "pre-wrap",
+        }}>
+          {typed}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AbiOS() {
+  const [focus, setFocus] = useState("");
+  const [intents, setIntents] = useState("");
+  const [freshbooks, setFreshbooks] = useState({ invoiced: "", outstanding: "", overdue: "", notes: "" });
+  const [actions, setActions] = useState([
+    { id: 1, text: "", entity: "janedope", done: false },
+    { id: 2, text: "", entity: "consulting", done: false },
+    { id: 3, text: "", entity: "abzlabs", done: false },
+  ]);
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const updateFB = (k, v) => setFreshbooks(p => ({ ...p, [k]: v }));
+  const toggleAction = id => setActions(p => p.map(a => a.id === id ? { ...a, done: !a.done } : a));
+  const updateActionText = (id, text) => setActions(p => p.map(a => a.id === id ? { ...a, text } : a));
+  const updateActionEntity = (id, entity) => setActions(p => p.map(a => a.id === id ? { ...a, entity } : a));
+  const addAction = () => setActions(p => [...p, { id: Date.now(), text: "", entity: "janedope", done: false }]);
+
+  const dayLabel = time.toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric" });
+  const timeLabel = time.toLocaleTimeString("en-CA", { hour: "2-digit", minute: "2-digit" });
+  const h = time.getHours();
+  const greeting = h < 9 ? "Good morning" : h < 12 ? "Morning" : h < 17 ? "Good afternoon" : "Good evening";
+
+  return (
+    <div style={{ background: "#fff", minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); opacity: 0.25; }
+          50% { transform: translateY(-8px); opacity: 1; }
+        }
+        * { box-sizing: border-box; }
+        ::placeholder { color: #ccc; }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ borderBottom: "3px solid #000", padding: "24px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.18em", color: "#aaa", textTransform: "uppercase", marginBottom: 6 }}>
+            Abz Labs · AI Operating System
+          </div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: "#000", letterSpacing: "-0.02em", lineHeight: 1 }}>
+            {greeting}, Abi.
+          </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 28, fontWeight: 700, color: "#000", lineHeight: 1 }}>{timeLabel}</div>
+          <div style={{ fontSize: 14, color: "#888", marginTop: 6 }}>{dayLabel}</div>
+        </div>
+      </div>
+
+      {/* Schedule strip */}
+      <div style={{ background: "#f8f8f8", borderBottom: "1px solid #e8e8e8", padding: "14px 40px", display: "flex", gap: 36, flexWrap: "wrap" }}>
+        {[
+          { label: "Drop-off", time: "8:00 AM", color: "#16a34a" },
+          { label: "Aquafit", time: "11:45 AM – 1:30 PM", color: "#2563eb" },
+          { label: "Dinner prep", time: "4:30 PM", color: "#d97706" },
+          { label: "Pick-up", time: "5:00 PM", color: "#16a34a" },
+        ].map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: item.color, flexShrink: 0 }} />
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#222" }}>{item.label}</span>
+            <span style={{ fontSize: 14, color: "#888" }}>{item.time}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px 60px" }}>
+
+        <Section title="Today's Focus">
+          <BigInput
+            label="Primary focus — what moves the needle today?"
+            value={focus}
+            onChange={setFocus}
+            placeholder="e.g. Close the Abz Labs proposal, finish homepage copy for Jane Dope..."
+            rows={2}
+          />
+          <BigInput
+            label="What else is on your mind?"
+            value={intents}
+            onChange={setIntents}
+            placeholder="Deadlines, follow-ups, things you're avoiding, decisions pending..."
+            rows={3}
+          />
+        </Section>
+
+        <Section title="Freshbooks" hint="enter manually each morning">
+          <div style={{ display: "flex", gap: 32, flexWrap: "wrap", marginBottom: 24 }}>
+            <MoneyInput label="Invoiced MTD" value={freshbooks.invoiced} onChange={v => updateFB("invoiced", v)} />
+            <MoneyInput label="Outstanding" value={freshbooks.outstanding} onChange={v => updateFB("outstanding", v)} />
+            <MoneyInput label="Overdue" value={freshbooks.overdue} onChange={v => updateFB("overdue", v)} />
+          </div>
+          <BigInput
+            label="Notes"
+            value={freshbooks.notes}
+            onChange={v => updateFB("notes", v)}
+            placeholder="Pending proposals, overdue clients, upcoming invoices..."
+            rows={2}
+          />
+        </Section>
+
+        <Section title="Morning Briefing" hint="AI chief of staff">
+          <Briefing focus={focus} intents={intents} freshbooks={freshbooks} />
+        </Section>
+
+        <Section title="Priority Actions">
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {actions.map(a => (
+              <CheckItem
+                key={a.id}
+                {...a}
+                onToggle={() => toggleAction(a.id)}
+                onTextChange={t => updateActionText(a.id, t)}
+                onEntityChange={e => updateActionEntity(a.id, e)}
+              />
+            ))}
+            <button
+              onClick={addAction}
+              style={{
+                background: "transparent",
+                border: "2px dashed #e0e0e0",
+                borderRadius: 8,
+                padding: "12px",
+                fontSize: 14,
+                color: "#aaa",
+                cursor: "pointer",
+                fontWeight: 600,
+                marginTop: 8,
+                transition: "border-color 0.15s, color 0.15s",
+              }}
+              onMouseOver={e => { e.target.style.borderColor = "#000"; e.target.style.color = "#000"; }}
+              onMouseOut={e => { e.target.style.borderColor = "#e0e0e0"; e.target.style.color = "#aaa"; }}
+            >
+              + Add action
+            </button>
+          </div>
+        </Section>
+
+        {/* Entity legend */}
+        <div style={{ borderTop: "1px solid #e8e8e8", paddingTop: 24, display: "flex", gap: 24, flexWrap: "wrap" }}>
+          {ENTITIES.map(e => (
+            <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: e.color, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: "#888" }}>{e.label}</span>
+            </div>
+          ))}
+        </div>
+
+      </div>
+    </div>
+  );
+}
